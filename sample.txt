@@ -1,0 +1,96 @@
+To create a basic trading setup in MQL5, including an Expert Advisor (EA), a custom indicator, and a script, here are the sample codes for each component.
+
+### 1. Expert Advisor (EA)
+
+This EA will open a buy order when a specific condition is met (e.g., a moving average crossover).
+
+```mql5
+// Expert Advisor: Simple Moving Average Crossover
+input int ShortMAPeriod = 10; // Short MA period
+input int LongMAPeriod = 30;   // Long MA period
+input double LotSize = 0.1;    // Lot size for trading
+
+double ShortMA, LongMA;
+
+void OnTick()
+{
+    // Calculate the moving averages
+    ShortMA = iMA(NULL, 0, ShortMAPeriod, 0, MODE_SMA, PRICE_CLOSE, 0);
+    LongMA = iMA(NULL, 0, LongMAPeriod, 0, MODE_SMA, PRICE_CLOSE, 0);
+
+    // Check for crossover
+    if (ShortMA > LongMA && PositionSelect(Symbol()) == false) // Buy condition
+    {
+        OrderSend(Symbol(), OP_BUY, LotSize, Ask, 3, 0, 0, "Buy Order", 0, 0, clrGreen);
+    }
+    else if (ShortMA < LongMA && PositionSelect(Symbol())) // Sell condition
+    {
+        OrderClose(OrderTicket());
+    }
+}
+```
+
+### 2. Custom Indicator
+
+This custom indicator will plot the Simple Moving Average (SMA) on the chart.
+
+```mql5
+// Custom Indicator: Simple Moving Average
+input int MAPeriod = 14; // Period for the moving average
+
+double MA[];
+
+int OnInit()
+{
+    SetIndexBuffer(0, MA);
+    SetIndexLabel(0, "SMA");
+    return INIT_SUCCEEDED;
+}
+
+void OnCalculate(const int rates_total,
+                 const int prev_calculated,
+                 const datetime &time[],
+                 const double &open[],
+                 const double &high[],
+                 const double &low[],
+                 const double &close[],
+                 const long &tick_volume[],
+                 const long &volume[],
+                 const double &spread[])
+{
+    for (int i = 0; i < rates_total; i++)
+    {
+        MA[i] = iMA(NULL, 0, MAPeriod, 0, MODE_SMA, PRICE_CLOSE, i);
+    }
+}
+```
+
+### 3. Script
+
+This script will close all open orders for the current symbol.
+
+```mql5
+// Script: Close All Orders for Current Symbol
+void OnStart()
+{
+    for (int i = OrdersTotal() - 1; i >= 0; i--)
+    {
+        if (OrderSelect(i, SELECT_BY_POS))
+        {
+            if (OrderSymbol() == Symbol())
+            {
+                OrderClose(OrderTicket());
+            }
+        }
+    }
+}
+```
+
+### How to Use
+
+1. **MetaEditor**: Open MetaEditor, create a new file for each component (EA, custom indicator, script), and copy the respective code into each file.
+2. **Compilation**: Compile each file to ensure there are no errors.
+3. **Testing**: Use the built-in strategy tester in MetaTrader 5 to test the EA with historical data.
+4. **Deployment**: Attach the EA to a chart, load the custom indicator, and run the script as needed.
+
+These examples provide a foundational framework to build upon for your trading strategies using MQL5. You can expand and modify them according to your specific requirements.
