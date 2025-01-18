@@ -70,69 +70,228 @@ void OnDeinit(const int reason)
 }
 
 //+------------------------------------------------------------------+
+//|                                                      PUR_EA.mq5  |
+//|                        PUR Trading Algorithm                     |
+//|                        Version 2.0 (MQL5 Best Practices)         |
+//+------------------------------------------------------------------+
+#property strict
+#property copyright "PUR Trading Systems"
+#property link      "https://www.purtrading.com"
+#property version   "2.0"
+
+// Input parameters
+input double LotSize = 0.1;            // Trade volume
+input int StopLoss = 50;               // Stop loss in points
+input int TakeProfit = 100;            // Take profit in points
+input int MagicNumber = 123456;        // Expert ID
+input int Slippage = 3;                // Maximum price slippage
+input double RiskPercent = 2.0;        // Risk percentage per trade
+input bool UseTrailingStop = true;     // Enable trailing stop
+input int TrailingStopPoints = 30;     // Trailing stop distance
+input bool UseBreakeven = true;        // Enable breakeven
+input int BreakevenPoints = 20;        // Breakeven activation level
+
+// Global variables
+int ticket;
+double lastPrice;
+datetime lastTradeTime;
+MqlTradeRequest request;
+MqlTradeResult result;
+MqlTick lastTick;
+CTrade trade;
+
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    // Initialize trade object
+    trade.SetExpertMagicNumber(MagicNumber);
+    
+    // Initialize logging
+    Print("PUR EA initialized successfully");
+    Print("Account Balance: ", AccountInfoDouble(ACCOUNT_BALANCE));
+    Print("Account Equity: ", AccountInfoDouble(ACCOUNT_EQUITY));
+    
+    // Check trading conditions
+    if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED))
+    {
+        Alert("Trading is not allowed!");
+        return(INIT_FAILED);
+    }
+    
+    return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Expert deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+    // Cleanup and logging
+    Print("PUR EA deinitialized with reason: ", reason);
+}
+
+//+------------------------------------------------------------------+
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
 void OnTick()
 {
-    // Check risk parameters
-    if(!CheckRiskParameters())
+    // Get latest market data
+    if(!SymbolInfoTick(Symbol(), lastTick))
+    {
+        Print("Failed to get tick data!");
+        return;
+    }
+
+    // Check trading conditions
+    if(!IsTradeAllowed())
         return;
 
-    // Calculate indicators
-    CalculateIndicators();
+    // Manage open positions
+    ManageOpenTrades();
 
-    // Generate trading signals
-    int signal = GenerateSignal();
-
-    // Execute trades
-    ExecuteTrade(signal);
-
-    // Update monitoring
-    if(EnableMonitoring)
-        UpdateMonitoring();
+    // Execute trading logic
+    if(ShouldOpenTrade())
+    {
+        OpenTrade();
+    }
 }
 
 //+------------------------------------------------------------------+
-//| Calculate indicators                                             |
+//| Check if trading is allowed                                      |
 //+------------------------------------------------------------------+
-void CalculateIndicators()
+bool IsTradeAllowed()
 {
-    ShortMA = iMA(NULL, 0, ShortMAPeriod, 0, MODE_SMA, PRICE_CLOSE, 0);
-    LongMA = iMA(NULL, 0, LongMAPeriod, 0, MODE_SMA, PRICE_CLOSE, 0);
-    RSI = iRSI(NULL, 0, RSIPeriod, PRICE_CLOSE, 0);
-    MACDMain = iMACD(NULL, 0, MACDFast, MACDSlow, MACDSignal, PRICE_CLOSE, MODE_MAIN, 0);
-    MACDSignal = iMACD(NULL, 0, MACDFast, MACDSlow, MACDSignal, PRICE_CLOSE, MODE_SIGNAL, 0);
-    ATR = iATR(NULL, 0, ATRPeriod, 0);
+    // Check trading permissions
+    if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED))
+    {
+        Print("Trading is not allowed!");
+        return false;
+    }
+    
+    // Check account permissions
+    if(!AccountInfoInteger(ACCOUNT_TRADE_EXPERT))
+    {
+        Print("Expert trading is not allowed!");
+        return false;
+    }
+    
+    // Check market conditions
+    if(!SymbolInfoInteger(Symbol(), SYMBOL_TRADE_MODE))
+    {
+        Print("Trading is not allowed for ", Symbol());
+        return false;
+    }
+    
+    return true;
 }
 
 //+------------------------------------------------------------------+
-//| Generate trading signal                                          |
+//| Manage open positions                                            |
 //+------------------------------------------------------------------+
-int GenerateSignal()
+void ManageOpenTrades()
 {
-    // MA Crossover signal
-    bool maBuySignal = ShortMA > LongMA && ShortMA[1] <= LongMA[1];
-    bool maSellSignal = ShortMA < LongMA && ShortMA[1] >= LongMA[1];
+    // Trailing stop logic
+    if(UseTrailingStop)
+    {
+        ApplyTrailingStop();
+    }
     
-    // RSI signal
-    bool rsiBuySignal = RSI < RSIOversold;
-    bool rsiSellSignal = RSI > RSIOverbought;
-    
-    // MACD signal
-    bool macdBuySignal = MACDMain > MACDSignal && MACDMain[1] <= MACDSignal[1];
-    bool macdSellSignal = MACDMain < MACDSignal && MACDMain[1] >= MACDSignal[1];
-    
-    // Combined signal
-    if(maBuySignal && rsiBuySignal && macdBuySignal)
-        return 1; // Buy signal
-    else if(maSellSignal && rsiSellSignal && macdSellSignal)
-        return -1; // Sell signal
-        
-    return 0; // No signal
+    // Breakeven logic
+    if(UseBreakeven)
+    {
+        ApplyBreakeven();
+    }
 }
 
 //+------------------------------------------------------------------+
-//| Execute trade                                                    |
+//| Apply trailing stop                                              |
+//+------------------------------------------------------------------+
+void ApplyTrailingStop()
+{
+    // Implementation of trailing stop logic
+}
+
+//+------------------------------------------------------------------+
+//| Apply breakeven                                                  |
+//+------------------------------------------------------------------+
+void ApplyBreakeven()
+{
+    // Implementation of breakeven logic
+}
+
+//+------------------------------------------------------------------+
+//| Trade opening condition                                          |
+//+------------------------------------------------------------------+
+bool ShouldOpenTrade()
+{
+    // Advanced trade condition logic
+    // Implement proper risk management
+    double riskAmount = AccountInfoDouble(ACCOUNT_BALANCE) * RiskPercent / 100.0;
+    double lotSize = NormalizeDouble(riskAmount / (StopLoss * Point), 2);
+    
+    // Check minimum lot size
+    if(lotSize < SymbolInfoDouble(Symbol(), SYMBOL_VOLUME_MIN))
+    {
+        Print("Calculated lot size is below minimum");
+        return false;
+    }
+    
+    // Check maximum lot size
+    if(lotSize > SymbolInfoDouble(Symbol(), SYMBOL_VOLUME_MAX))
+    {
+        Print("Calculated lot size is above maximum");
+        return false;
+    }
+    
+    // Check time since last trade
+    if(TimeCurrent() - lastTradeTime < PeriodSeconds(PERIOD_M1))
+    {
+        return false;
+    }
+    
+    return true;
+}
+
+//+------------------------------------------------------------------+
+//| Open trade function                                              |
+//+------------------------------------------------------------------+
+void OpenTrade()
+{
+    // Initialize trade request
+    ZeroMemory(request);
+    ZeroMemory(result);
+    
+    // Calculate lot size based on risk
+    double riskAmount = AccountInfoDouble(ACCOUNT_BALANCE) * RiskPercent / 100.0;
+    double lotSize = NormalizeDouble(riskAmount / (StopLoss * Point), 2);
+    
+    // Set trade parameters
+    request.action = TRADE_ACTION_DEAL;
+    request.symbol = Symbol();
+    request.volume = lotSize;
+    request.type = ORDER_TYPE_BUY;
+    request.price = lastTick.ask;
+    request.sl = lastTick.ask - StopLoss * Point;
+    request.tp = lastTick.ask + TakeProfit * Point;
+    request.deviation = Slippage;
+    request.magic = MagicNumber;
+    
+    // Execute trade
+    if(!OrderSend(request, result))
+    {
+        Print("Trade failed: ", result.retcode);
+        return;
+    }
+    
+    // Update last trade time
+    lastTradeTime = TimeCurrent();
+    
+    // Log trade details
+    Print("Trade opened successfully: ", result.order);
+}
+
 //+------------------------------------------------------------------+
 void ExecuteTrade(int signal)
 {
