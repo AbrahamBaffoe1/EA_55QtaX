@@ -161,14 +161,153 @@ void OnTick()
     if(!IsTradeAllowed())
         return;
 
+    // Check for high impact news events
+    if(UseNewsFilter && newsFilter.IsHighImpactNews())
+    {
+        if(EnableTelegram)
+            telegramBot.SendMessage("High impact news detected - trading paused");
+        return;
+    }
+
+    // Get multi-timeframe analysis
+    double higherTFSignal = 0;
+    if(MultiTimeframe)
+    {
+        higherTFSignal = GetHigherTimeframeSignal();
+    }
+
+    // Get ML prediction if enabled
+    double mlPrediction = 0;
+    if(EnableML && MLModelPath != "")
+    {
+        double features[];
+        if(PrepareFeatures(features))
+        {
+            mlPrediction = mlModel.Predict(features);
+        }
+    }
+
     // Manage open positions
     ManageOpenTrades();
 
     // Execute trading logic
-    if(ShouldOpenTrade())
+    int signal = GetTradeSignal(higherTFSignal, mlPrediction);
+    if(signal != 0 && ShouldOpenTrade())
     {
-        OpenTrade();
+        OpenTrade(signal);
+        
+        // Send Telegram notification
+        if(EnableTelegram)
+        {
+            string message = StringFormat("Trade opened: %s %s at %s",
+                signal > 0 ? "BUY" : "SELL",
+                Symbol(),
+                DoubleToString(lastTick.bid, Digits()));
+            telegramBot.SendMessage(message);
+        }
     }
+
+    // Run auto-optimization
+    if(AutoOptimize && TimeCurrent() - lastOptimization > 3600)
+    {
+        optimizer.Optimize();
+        lastOptimization = TimeCurrent();
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Prepare features for ML prediction                               |
+//+------------------------------------------------------------------+
+bool PrepareFeatures(double &features[])
+{
+    // Technical indicators
+    double rsi = iRSI(Symbol(), 0, RSIPeriod, PRICE_CLOSE, 0);
+    double macd = iMACD(Symbol(), 0, MACDFast, MACDSlow, MACDSignal, PRICE_CLOSE, MODE_MAIN, 0);
+    double atr = iATR(Symbol(), 0, ATRPeriod, 0);
+    double maDiff = iMA(Symbol(), 0, ShortMAPeriod, 0, MODE_SMA, PRICE_CLOSE, 0) - 
+                   iMA(Symbol(), 0, LongMAPeriod, 0, MODE_SMA, PRICE_CLOSE, 0);
+    
+    // Price action features
+    double priceChange = (lastTick.bid - lastTick.ask) / lastTick.ask;
+    double spread = lastTick.ask - lastTick.bid;
+    
+    // Volume features
+    double volume = iVolume(Symbol(), 0, 0);
+    
+    // Create feature array
+    ArrayResize(features, 7);
+    features[0] = rsi;
+    features[1] = macd;
+    features[2] = atr;
+    features[3] = maDiff;
+    features[4] = priceChange;
+    features[5] = spread;
+    features[6] = volume;
+    
+    return true;
+}
+
+//+------------------------------------------------------------------+
+//| Get higher timeframe signal                                      |
+//+------------------------------------------------------------------+
+double GetHigherTimeframeSignal()
+{
+    // Get indicators from higher timeframe
+    double htfRSI = iRSI(Symbol(), HigherTF, RSIPeriod, PRICE_CLOSE, 0);
+    double htfMACD = iMACD(Symbol(), HigherTF, MACDFast, MACDSlow, MACDSignal, PRICE_CLOSE, MODE_MAIN, 0);
+    double htfMA = iMA(Symbol(), HigherTF, LongMAPeriod, 0, MODE_SMA, PRICE_CLOSE, 0);
+    
+    // Calculate signal strength
+    double signal = 0;
+    
+    // RSI based signal
+    if(htfRSI < RSIOversold)
+        signal += 0.5;
+    else if(htfRSI > RSIOverbought)
+        signal -= 0.5;
+        
+    // MACD based signal
+    if(htfMACD > 0)
+        signal += 0.3;
+    else
+        signal -= 0.3;
+        
+    // MA trend direction
+    double currentPrice = iClose(Symbol(), HigherTF, 0);
+    if(currentPrice > htfMA)
+        signal += 0.2;
+    else
+        signal -= 0.2;
+        
+    return signal;
+}
+
+//+------------------------------------------------------------------+
+//| Get trade signal                                                 |
+//+------------------------------------------------------------------+
+int GetTradeSignal(double higherTFSignal, double mlPrediction)
+{
+    // Combine signals from different sources
+    int signal = 0;
+    
+    // Basic strategy signals
+    double rsi = iRSI(Symbol(), 0, RSIPeriod, PRICE_CLOSE, 0);
+    double macd = iMACD(Symbol(), 0, MACDFast, MACDSlow, MACDSignal, PRICE_CLOSE, MODE_MAIN, 0);
+    
+    // Combine signals with weights
+    if(rsi < RSIOversold && macd > 0)
+        signal += 1;
+    if(rsi > RSIOverbought && macd < 0)
+        signal -= 1;
+    
+    // Add higher timeframe signal
+    signal += higherTFSignal;
+    
+    // Add ML prediction
+    if(EnableML)
+        signal += mlPrediction;
+    
+    return signal > 0 ? 1 : (signal < 0 ? -1 : 0);
 }
 
 //+------------------------------------------------------------------+
@@ -223,7 +362,33 @@ void ManageOpenTrades()
 //+------------------------------------------------------------------+
 void ApplyTrailingStop()
 {
-    // Implementation of trailing stop logic
+    if(!PositionSelect(Symbol()))
+        return;
+        
+    double currentPrice = PositionGetDouble(POSITION_PRICE_CURRENT);
+    double openPrice = PositionGetDouble(POSITION_PRICE_OPEN);
+    double stopLoss = PositionGetDouble(POSITION_SL);
+    double takeProfit = PositionGetDouble(POSITION_TP);
+    double points = SymbolInfoDouble(Symbol(), SYMBOL_POINT);
+    
+    // Calculate new stop loss
+    double newStopLoss = stopLoss;
+    if(PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY)
+    {
+        newStopLoss = currentPrice - TrailingStopPoints * points;
+        if(newStopLoss > stopLoss && newStopLoss < currentPrice)
+        {
+            trade.PositionModify(Symbol(), newStopLoss, takeProfit);
+        }
+    }
+    else if(PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_SELL)
+    {
+        newStopLoss = currentPrice + TrailingStopPoints * points;
+        if(newStopLoss < stopLoss && newStopLoss > currentPrice)
+        {
+            trade.PositionModify(Symbol(), newStopLoss, takeProfit);
+        }
+    }
 }
 
 //+------------------------------------------------------------------+
@@ -231,7 +396,32 @@ void ApplyTrailingStop()
 //+------------------------------------------------------------------+
 void ApplyBreakeven()
 {
-    // Implementation of breakeven logic
+    if(!PositionSelect(Symbol()))
+        return;
+        
+    double currentPrice = PositionGetDouble(POSITION_PRICE_CURRENT);
+    double openPrice = PositionGetDouble(POSITION_PRICE_OPEN);
+    double stopLoss = PositionGetDouble(POSITION_SL);
+    double takeProfit = PositionGetDouble(POSITION_TP);
+    double points = SymbolInfoDouble(Symbol(), SYMBOL_POINT);
+    
+    // Calculate breakeven level
+    if(PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY)
+    {
+        if(currentPrice >= openPrice + BreakevenPoints * points && 
+           stopLoss < openPrice)
+        {
+            trade.PositionModify(Symbol(), openPrice, takeProfit);
+        }
+    }
+    else if(PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_SELL)
+    {
+        if(currentPrice <= openPrice - BreakevenPoints * points && 
+           stopLoss > openPrice)
+        {
+            trade.PositionModify(Symbol(), openPrice, takeProfit);
+        }
+    }
 }
 
 //+------------------------------------------------------------------+
@@ -270,7 +460,7 @@ bool ShouldOpenTrade()
 //+------------------------------------------------------------------+
 //| Open trade function                                              |
 //+------------------------------------------------------------------+
-void OpenTrade()
+void OpenTrade(int signal)
 {
     // Initialize trade request
     ZeroMemory(request);
@@ -284,12 +474,28 @@ void OpenTrade()
     request.action = TRADE_ACTION_DEAL;
     request.symbol = Symbol();
     request.volume = lotSize;
-    request.type = ORDER_TYPE_BUY;
-    request.price = lastTick.ask;
-    request.sl = lastTick.ask - StopLoss * Point;
-    request.tp = lastTick.ask + TakeProfit * Point;
     request.deviation = Slippage;
     request.magic = MagicNumber;
+    
+    // Set trade direction based on signal
+    if(signal == 1) // Buy
+    {
+        request.type = ORDER_TYPE_BUY;
+        request.price = lastTick.ask;
+        request.sl = lastTick.ask - StopLoss * Point;
+        request.tp = lastTick.ask + TakeProfit * Point;
+    }
+    else if(signal == -1) // Sell
+    {
+        request.type = ORDER_TYPE_SELL;
+        request.price = lastTick.bid;
+        request.sl = lastTick.bid + StopLoss * Point;
+        request.tp = lastTick.bid - TakeProfit * Point;
+    }
+    else
+    {
+        return; // Invalid signal
+    }
     
     // Execute trade
     if(!OrderSend(request, result))
@@ -303,6 +509,17 @@ void OpenTrade()
     
     // Log trade details
     Print("Trade opened successfully: ", result.order);
+    
+    // Update monitoring
+    if(EnableMonitoring)
+    {
+        LogTrade(
+            request.type,
+            request.volume,
+            request.sl,
+            request.tp
+        );
+    }
 }
 
 //+------------------------------------------------------------------+
