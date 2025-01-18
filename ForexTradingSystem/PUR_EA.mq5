@@ -91,6 +91,19 @@ input int TrailingStopPoints = 30;     // Trailing stop distance
 input bool UseBreakeven = true;        // Enable breakeven
 input int BreakevenPoints = 20;        // Breakeven activation level
 
+// Advanced Features
+input bool EnableML = false;           // Enable Machine Learning
+input string MLModelPath = "";         // Path to ML model
+input bool UseNewsFilter = true;       // Enable News Event Filter
+input int NewsImpactLevel = 2;         // Minimum news impact level (1-3)
+input bool EnableTelegram = false;     // Enable Telegram Notifications
+input string TelegramToken = "";       // Telegram Bot Token
+input string TelegramChatID = "";      // Telegram Chat ID
+input bool MultiTimeframe = true;      // Enable Multi-Timeframe Analysis
+input ENUM_TIMEFRAMES HigherTF = PERIOD_H1; // Higher timeframe for analysis
+input bool AutoOptimize = false;       // Enable Auto Optimization
+input int OptimizationPeriod = 14;     // Optimization lookback period (days)
+
 // Global variables
 int ticket;
 double lastPrice;
@@ -464,5 +477,97 @@ public:
     }
 };
 
+//+------------------------------------------------------------------+
+//| Machine Learning Model Class                                     |
+//+------------------------------------------------------------------+
+class CMLModel
+{
+private:
+    int handle;
+    
+public:
+    bool Load(string path)
+    {
+        handle = FileOpen(path, FILE_READ|FILE_BIN);
+        if(handle == INVALID_HANDLE)
+            return false;
+        return true;
+    }
+    
+    double Predict(double &features[])
+    {
+        // Implement ML prediction logic
+        return 0.0;
+    }
+};
+
+//+------------------------------------------------------------------+
+//| News Event Filter Class                                          |
+//+------------------------------------------------------------------+
+class CNewsFilter
+{
+public:
+    bool Initialize()
+    {
+        // Initialize news filter
+        return true;
+    }
+    
+    bool IsHighImpactNews()
+    {
+        // Check for high impact news
+        return false;
+    }
+};
+
+//+------------------------------------------------------------------+
+//| Telegram Notification Class                                      |
+//+------------------------------------------------------------------+
+class CTelegramBot
+{
+private:
+    string token;
+    string chatID;
+    
+public:
+    bool Initialize(string _token, string _chatID)
+    {
+        token = _token;
+        chatID = _chatID;
+        return true;
+    }
+    
+    void SendMessage(string message)
+    {
+        // Implement Telegram message sending
+    }
+};
+
+//+------------------------------------------------------------------+
+//| Auto Optimizer Class                                             |
+//+------------------------------------------------------------------+
+class COptimizer
+{
+private:
+    int period;
+    
+public:
+    bool Initialize(int _period)
+    {
+        period = _period;
+        return true;
+    }
+    
+    void Optimize()
+    {
+        // Implement optimization logic
+    }
+};
+
+// Global instances
 CTrade trade;
+CMLModel mlModel;
+CNewsFilter newsFilter;
+CTelegramBot telegramBot;
+COptimizer optimizer;
 //+------------------------------------------------------------------+
