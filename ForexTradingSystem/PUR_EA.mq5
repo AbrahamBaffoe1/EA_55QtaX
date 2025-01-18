@@ -573,6 +573,9 @@ void LogTrade(int tradeType, double volume, double stopLoss, double takeProfit)
             takeProfit,
             0 // Initial profit is 0
         );
+        
+        // Flush to ensure data is written
+        FileFlush(FileHandle);
     }
 }
 
@@ -594,7 +597,72 @@ void UpdateMonitoring()
         long lastPosition = FileTell(FileHandle) - 1;
         FileSeek(FileHandle, lastPosition, SEEK_SET);
         FileWrite(FileHandle, profit);
+        FileFlush(FileHandle);
+        
+        // Check for daily loss limit
+        if(TotalProfit < -AccountEquity * MaxDailyLoss)
+        {
+            Print("Daily loss limit reached!");
+            if(EnableTelegram)
+                telegramBot.SendMessage("Daily loss limit reached - trading paused");
+            
+            // Close all positions
+            trade.PositionClose(Symbol());
+            
+            // Disable trading until next day
+            lastTradeTime = TimeCurrent() + 86400; // 24 hours
+        }
     }
+}
+
+//+------------------------------------------------------------------+
+//| Calculate trade statistics                                       |
+//+------------------------------------------------------------------+
+void CalculateStatistics()
+{
+    if(!EnableMonitoring || FileHandle == INVALID_HANDLE)
+        return;
+        
+    // Calculate win rate
+    int totalTrades = 0;
+    int winningTrades = 0;
+    double totalProfit = 0;
+    double maxDrawdown = 0;
+    double currentDrawdown = 0;
+    
+    FileSeek(FileHandle, 0, SEEK_SET);
+    while(!FileIsEnding(FileHandle))
+    {
+        string data[];
+        int count = FileReadArray(FileHandle, data);
+        if(count > 0)
+        {
+            totalTrades++;
+            double profit = (double)data[7];
+            totalProfit += profit;
+            
+            if(profit > 0)
+                winningTrades++;
+                
+            if(profit < 0)
+                currentDrawdown += profit;
+            else
+                currentDrawdown = 0;
+                
+            if(currentDrawdown < maxDrawdown)
+                maxDrawdown = currentDrawdown;
+        }
+    }
+    
+    // Write statistics
+    FileSeek(FileHandle, 0, SEEK_END);
+    FileWrite(FileHandle, "Statistics:");
+    FileWrite(FileHandle, "Total Trades:", totalTrades);
+    FileWrite(FileHandle, "Winning Trades:", winningTrades);
+    FileWrite(FileHandle, "Win Rate:", (double)winningTrades / totalTrades * 100, "%");
+    FileWrite(FileHandle, "Total Profit:", totalProfit);
+    FileWrite(FileHandle, "Max Drawdown:", maxDrawdown);
+    FileFlush(FileHandle);
 }
 
 //+------------------------------------------------------------------+

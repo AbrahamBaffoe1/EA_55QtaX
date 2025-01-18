@@ -27,15 +27,18 @@ class MTExecution:
     def place_order(self, symbol: str, order_type: str, volume: float, 
                    price: Optional[float] = None, stop_loss: Optional[float] = None,
                    take_profit: Optional[float] = None) -> Dict:
-        """Place an order on MetaTrader"""
+        """Place an order on MetaTrader 4"""
         try:
+            # Convert order type to MT4 format
+            mt4_order_type = 0 if order_type.upper() == 'BUY' else 1
+            
             payload = {
                 'symbol': symbol,
-                'type': order_type.upper(),
+                'type': mt4_order_type,
                 'volume': volume,
                 'price': price,
-                'stopLoss': stop_loss,
-                'takeProfit': take_profit
+                'stoploss': stop_loss,
+                'takeprofit': take_profit
             }
             
             response = self.session.post(
@@ -50,7 +53,7 @@ class MTExecution:
             raise
             
     def close_order(self, ticket: int) -> Dict:
-        """Close an existing order"""
+        """Close an existing order in MT4"""
         try:
             response = self.session.delete(
                 f'{self.api_url}/order/{ticket}'
@@ -62,7 +65,7 @@ class MTExecution:
             raise
             
     def get_account_info(self) -> Dict:
-        """Get account information"""
+        """Get MT4 account information"""
         try:
             response = self.session.get(f'{self.api_url}/account')
             response.raise_for_status()
@@ -72,7 +75,7 @@ class MTExecution:
             raise
             
     def get_positions(self) -> Dict:
-        """Get open positions"""
+        """Get open positions in MT4"""
         try:
             response = self.session.get(f'{self.api_url}/positions')
             response.raise_for_status()
@@ -83,11 +86,11 @@ class MTExecution:
             
     def modify_order(self, ticket: int, stop_loss: Optional[float] = None,
                     take_profit: Optional[float] = None) -> Dict:
-        """Modify an existing order"""
+        """Modify an existing order in MT4"""
         try:
             payload = {
-                'stopLoss': stop_loss,
-                'takeProfit': take_profit
+                'stoploss': stop_loss,
+                'takeprofit': take_profit
             }
             
             response = self.session.patch(
@@ -101,7 +104,7 @@ class MTExecution:
             raise
             
     def execute_mql(self, code: str, params: Optional[Dict] = None) -> Dict:
-        """Execute custom MQL code"""
+        """Execute custom MQL4 code"""
         try:
             payload = {
                 'code': code,
@@ -120,7 +123,7 @@ class MTExecution:
             
     def calculate_indicator(self, symbol: str, timeframe: str, 
                           indicator_name: str, params: Dict) -> Dict:
-        """Calculate technical indicator using MQL"""
+        """Calculate technical indicator using MQL4"""
         try:
             payload = {
                 'symbol': symbol,
@@ -141,7 +144,7 @@ class MTExecution:
             
     def backtest_strategy(self, code: str, params: Dict, 
                          start_date: str, end_date: str) -> Dict:
-        """Backtest a custom MQL strategy"""
+        """Backtest a custom MQL4 strategy"""
         try:
             payload = {
                 'code': code,
@@ -161,17 +164,17 @@ class MTExecution:
             raise
 
     def execute_trades(self, signals: list) -> None:
-        """Execute trades based on trading signals"""
+        """Execute trades based on trading signals for MT4"""
         try:
             for signal in signals:
-                # Convert signal to MT order parameters
+                # Convert signal to MT4 order parameters
                 order_type = 'BUY' if signal['direction'] == 'long' else 'SELL'
                 volume = signal['volume']
                 price = signal.get('price')
                 stop_loss = signal.get('stop_loss')
                 take_profit = signal.get('take_profit')
                 
-                # Place order through MetaTrader API
+                # Place order through MetaTrader 4 API
                 order_response = self.place_order(
                     symbol=signal['symbol'],
                     order_type=order_type,
