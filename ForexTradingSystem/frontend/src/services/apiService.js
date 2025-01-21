@@ -9,6 +9,7 @@ const apiClient = axios.create({
   },
 });
 
+// Dashboard
 export const fetchDashboardData = async () => {
   try {
     const response = await apiClient.get('/dashboard');
@@ -18,6 +19,31 @@ export const fetchDashboardData = async () => {
   }
 };
 
+// News Feed
+export const fetchNewsFeed = async (page = 1, limit = 10) => {
+  try {
+    const response = await apiClient.get('/news', {
+      params: { page, limit }
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error('Failed to fetch news feed');
+  }
+};
+
+// Analytics
+export const fetchAnalyticsData = async (timeframe = '1d') => {
+  try {
+    const response = await apiClient.get('/analytics', {
+      params: { timeframe }
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error('Failed to fetch analytics data');
+  }
+};
+
+// Bot Configuration
 export const fetchBotConfigurations = async () => {
   try {
     const response = await apiClient.get('/bots');
@@ -36,6 +62,7 @@ export const updateBotConfiguration = async (botId, config) => {
   }
 };
 
+// Portfolio
 export const fetchPortfolioData = async () => {
   try {
     const response = await apiClient.get('/portfolio');
@@ -45,11 +72,35 @@ export const fetchPortfolioData = async () => {
   }
 };
 
-export const fetchNewsFeed = async () => {
+export const executeTrade = async (tradeData) => {
   try {
-    const response = await apiClient.get('/news');
+    const response = await apiClient.post('/portfolio/trades', tradeData);
     return response.data;
   } catch (error) {
-    throw new Error('Failed to fetch news feed');
+    throw new Error('Failed to execute trade');
   }
+};
+
+// Research
+export const fetchMarketResearch = async (symbol, timeframe) => {
+  try {
+    const response = await apiClient.get('/research', {
+      params: { symbol, timeframe }
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error('Failed to fetch market research');
+  }
+};
+
+// WebSocket connection
+export const connectWebSocket = (onMessage) => {
+  const ws = new WebSocket('ws://localhost:5000/ws');
+  
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    onMessage(data);
+  };
+
+  return ws;
 };
