@@ -1,0 +1,49 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #1a1a1a;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.brand {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.brandLink {
+  color: white;
+  text-decoration: none;
+}
+
+.navList {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.navItem {
+  margin-left: 2rem;
+}
+
+.navLink {
+  color: #ccc;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+}
+
+.navLink:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.activeLink {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+  font-weight: bold;
+}
