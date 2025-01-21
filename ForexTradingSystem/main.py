@@ -3,6 +3,11 @@ import time
 import logging
 from decimal import Decimal
 from dotenv import load_dotenv
+from flask import Flask, jsonify, request
+from flask_socketio import SocketIO
+from flask_cors import CORS
+import eventlet
+eventlet.monkey_patch()
 
 # Load environment variables from .env file
 load_dotenv()
@@ -13,6 +18,37 @@ from modules.risk_management import RiskManager
 from modules.hedging import Hedging
 from modules.arbitrage import Arbitrage
 from modules.monitoring import Monitoring
+
+# Initialize API server
+app = Flask(__name__)
+CORS(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({'status': 'healthy'})
+
+@app.route('/api/status', methods=['GET'])
+def get_system_status():
+    return jsonify({
+        'trading_active': trading_system is not None,
+        'last_trade': trading_system.execution.last_trade if trading_system else None,
+        'risk_parameters': trading_system.risk_manager.get_current_risk() if trading_system else None
+    })
+
+@app.route('/api/control/start', methods=['POST'])
+def start_trading():
+    if trading_system:
+        trading_system.logger.info("Trading started via API")
+        return jsonify({'status': 'started'})
+    return jsonify({'error': 'Trading system not initialized'}), 500
+
+@app.route('/api/control/stop', methods=['POST'])
+def stop_trading():
+    if trading_system:
+        trading_system.logger.info("Trading stopped via API")
+        return jsonify({'status': 'stopped'})
+    return jsonify({'error': 'Trading system not initialized'}), 500
 
 class TradingSystem:
     def __init__(self):
@@ -86,5 +122,21 @@ class TradingSystem:
                 time.sleep(60)
 
 if __name__ == "__main__":
+    # Initialize trading system
     trading_system = TradingSystem()
-    trading_system.run()
+    
+    # Start trading system in separate thread
+    import threading
+    trading_thread = threading.Thread(
+        target=trading_system.run,
+        daemon=True
+    )
+    trading_thread.start()
+    
+    # Start API server
+    socketio.run(
+        app,
+        host=os.getenv('API_HOST'),
+        port=int(os.getenv('API_PORT')),
+        debug=False
+    )
