@@ -1,5 +1,5 @@
 import pytest
-from modules.data_feed import DataFeed
+from ForexTradingSystem.modules.data_feed import DataFeed
 
 @pytest.fixture
 def data_feed():
