@@ -25,6 +25,162 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.metric {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.label {
+  display: block;
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.allocation {
+  margin-top: 1rem;
+}
+
+.chart {
+  display: flex;
+  height: 20px;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 1rem 0;
+}
+
+.chartSegment {
+  height: 100%;
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.colorSwatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.currency {
+  font-weight: 500;
+}
+
+.percentage {
+  margin-left: auto;
+  color: #666;
+}
+
+.history {
+  margin-top: 2rem;
+}
+
+.tableContainer {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.table th {
+  font-weight: 600;
+  color: #495057;
+  background-color: #f8f9fa;
+}
+
+.tradeType {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.buy {
+  background-color: #d1e7dd;
+  color: #0f5132;
+}
+
+.sell {
+  background-color: #f8d7da;
+  color: #842029;
+}
+
+.status {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.open {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.closed {
+  background-color: #d1e7dd;
+  color: #0f5132;
+}
+
+.cancelled {
+  background-color: #f8d7da;
+  color: #842029;
+}
+
+.profit {
+  color: #198754;
+  font-weight: 500;
+}
+
+.loss {
+  color: #dc3545;
+  font-weight: 500;
+}
+
 @media (max-width: 1200px) {
   .grid {
     grid-template-columns: 1fr;
