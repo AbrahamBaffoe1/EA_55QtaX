@@ -1,0 +1,38 @@
+.quickActions {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background-color: #1e1e1e;
+  border-radius: 8px;
+}
+
+.quickActions h2 {
+  margin-bottom: 1.5rem;
+  color: #fff;
+}
+
+.actionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.actionButton {
+  padding: 1rem;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.actionButton:hover {
+  background-color: #333;
+  border-color: #666;
+  transform: translateY(-2px);
+}
+
+.actionButton:active {
+  transform: translateY(0);
+}
