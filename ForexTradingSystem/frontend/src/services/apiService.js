@@ -32,6 +32,15 @@ export const fetchNewsFeed = async (page = 1, limit = 10) => {
 };
 
 // Analytics
+export const fetchAnalytics = async () => {
+  try {
+    const response = await apiClient.get('/analytics');
+    return response.data;
+  } catch (error) {
+    throw new Error('Failed to fetch analytics');
+  }
+};
+
 export const fetchAnalyticsData = async (timeframe = '1d') => {
   try {
     const response = await apiClient.get('/analytics', {

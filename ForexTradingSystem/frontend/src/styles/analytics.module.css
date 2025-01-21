@@ -1,0 +1,39 @@
+.analyticsContainer {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.analyticsContainer h1 {
+  color: #fff;
+  margin-bottom: 2rem;
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.chartContainer {
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.chartContainer h3 {
+  color: #fff;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .analyticsContainer {
+    padding: 1rem;
+  }
+  
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+}
