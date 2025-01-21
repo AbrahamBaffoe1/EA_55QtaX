@@ -1,3 +1,4 @@
+import os
 import dash
 from dash import dcc, html
 import plotly.express as px
@@ -86,6 +87,6 @@ class Monitoring:
     def run(self):
         """Run the monitoring dashboard"""
         try:
-            self.app.run_server(host='0.0.0.0', port=8051)
+            self.app.run_server(host='0.0.0.0', port=int(os.getenv('API_PORT', 8051)))
         except Exception as e:
             self.logger.error(f"Error running monitoring dashboard: {e}")

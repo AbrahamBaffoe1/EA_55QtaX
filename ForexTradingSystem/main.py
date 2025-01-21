@@ -1,5 +1,8 @@
+import eventlet
+eventlet.monkey_patch()
+
 import os
-import time
+import sys
 import logging
 from decimal import Decimal
 from dotenv import load_dotenv
@@ -23,6 +26,38 @@ from modules.monitoring import Monitoring
 app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Authentication middleware
+@app.before_request
+def authenticate_request():
+    # Skip authentication for health check
+    if request.path == '/health':
+        return
+    
+    # Get API key from headers
+    api_key = request.headers.get('X-API-KEY')
+    if not api_key or api_key != os.getenv('API_KEY'):
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    # Get JWT token from headers
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    token = auth_header.split(' ')[1]
+    try:
+        # Verify JWT token
+        import jwt
+        decoded = jwt.decode(
+            token,
+            os.getenv('JWT_SECRET'),
+            algorithms=['HS256']
+        )
+        request.user = decoded
+    except jwt.ExpiredSignatureError:
+        return jsonify({'error': 'Token expired'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Invalid token'}), 401
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -49,6 +84,34 @@ def stop_trading():
         trading_system.logger.info("Trading stopped via API")
         return jsonify({'status': 'stopped'})
     return jsonify({'error': 'Trading system not initialized'}), 500
+
+# WebSocket event handlers
+@socketio.on('connect')
+def handle_connect():
+    socketio.emit('system_status', {
+        'status': 'connected',
+        'trading_active': trading_system is not None
+    })
+
+@socketio.on('subscribe_market_data')
+def handle_market_data_subscription():
+    if trading_system:
+        trading_system.data_feed.add_subscriber(request.sid)
+
+@socketio.on('unsubscribe_market_data')
+def handle_market_data_unsubscription():
+    if trading_system:
+        trading_system.data_feed.remove_subscriber(request.sid)
+
+@socketio.on('subscribe_trades')
+def handle_trade_subscription():
+    if trading_system:
+        trading_system.execution.add_subscriber(request.sid)
+
+@socketio.on('unsubscribe_trades')
+def handle_trade_unsubscription():
+    if trading_system:
+        trading_system.execution.remove_subscriber(request.sid)
 
 class TradingSystem:
     def __init__(self):
