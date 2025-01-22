@@ -76,7 +76,21 @@ class APIServer:
                 self.logger.error(f"Bots error: {e}")
                 return jsonify({'error': str(e)}), 500
                 
-        # Add other required endpoints here
+        @self.app.route('/api/bots/performance', methods=['GET'])
+        def get_bots_performance():
+            try:
+                return jsonify(self.get_bots_performance())
+            except Exception as e:
+                self.logger.error(f"Bots performance error: {e}")
+                return jsonify({'error': str(e)}), 500
+                
+        @self.app.route('/api/bots/<string:bot_id>/performance', methods=['GET'])
+        def get_bot_performance(bot_id):
+            try:
+                return jsonify(self.get_bot_performance(bot_id))
+            except Exception as e:
+                self.logger.error(f"Bot performance error: {e}")
+                return jsonify({'error': str(e)}), 500
         
     def setup_socket_events(self):
         @self.socketio.on('connect')
