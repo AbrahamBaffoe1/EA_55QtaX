@@ -194,3 +194,34 @@ class MTExecution:
         except Exception as e:
             self.logger.error(f"Error executing trades: {e}")
             raise
+
+    def get_bot_performance(self, bot_id: str) -> Dict:
+        """Get performance metrics for a specific bot"""
+        try:
+            response = self.session.get(
+                f'{self.api_url}/bots/{bot_id}/performance',
+                headers={'Authorization': f'Bearer {self.api_key}'}
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            self.logger.error(f"Error getting bot performance: {e}")
+            return {
+                'bot_id': bot_id,
+                'error': str(e),
+                'metrics': {
+                    'win_rate': 0,
+                    'drawdown': 0,
+                    'profit_factor': 0,
+                    'total_trades': 0,
+                    'profit': 0
+                }
+            }
+
+if __name__ == "__main__":
+    # Test the MTExecution class
+    mt = MTExecution(
+        api_url="http://localhost:8080",
+        api_key="test-key"
+    )
+    print(mt.get_account_info())

@@ -111,6 +111,35 @@ class APIServer:
                          
     def stop(self):
         self.socketio.stop()
+        
+    def get_bots_performance(self):
+        """Get performance metrics for all bots"""
+        try:
+            # Get all bot configurations
+            bots = self.get_bot_configurations()
+            
+            # Get performance for each bot
+            performance = []
+            for bot in bots:
+                bot_id = bot['id']
+                bot_perf = self.execution.get_bot_performance(bot_id)
+                performance.append({
+                    'bot_id': bot_id,
+                    'performance': bot_perf
+                })
+                
+            return performance
+        except Exception as e:
+            self.logger.error(f"Error getting bots performance: {e}")
+            return []
+            
+    def get_bot_performance(self, bot_id):
+        """Get detailed performance for a specific bot"""
+        try:
+            return self.execution.get_bot_performance(bot_id)
+        except Exception as e:
+            self.logger.error(f"Error getting bot performance: {e}")
+            return {}
 
 if __name__ == "__main__":
     import argparse
