@@ -1,3 +1,11 @@
+try:
+    from gevent import monkey
+    monkey.patch_all()
+    async_mode = 'gevent'
+except Exception as e:
+    print(f"Gevent monkey patching failed: {e}")
+    async_mode = 'threading'
+
 import os
 import json
 import logging
@@ -20,7 +28,7 @@ class APIServer:
     def __init__(self):
         self.app = Flask(__name__)
         CORS(self.app)
-        self.socketio = SocketIO(self.app, cors_allowed_origins="*")
+        self.socketio = SocketIO(self.app, cors_allowed_origins="*", async_mode=async_mode)
         self.logger = self._setup_logger()
         
         # Initialize trading system components
@@ -81,14 +89,20 @@ class APIServer:
             
         # Add other socket events here
         
-    def start(self):
+    def start(self, port=None):
         self.socketio.run(self.app, 
                          host=os.getenv('API_HOST', '0.0.0.0'),
-                         port=int(os.getenv('API_PORT', 5000)))
+                         port=int(port or os.getenv('API_PORT', 5000)),
+                         use_reloader=False)
                          
     def stop(self):
         self.socketio.stop()
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--port', type=int, help='Port to run the API server on')
+    args = parser.parse_args()
+    
     api_server = APIServer()
-    api_server.start()
+    api_server.start(port=5001)

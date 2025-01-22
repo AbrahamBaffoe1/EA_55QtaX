@@ -3,16 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.1",
-    "axios": "^1.6.7",
-    "socket.io-client": "^4.7.2",
-    "@mui/material": "^5.14.19",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
+    "@mui/material": "^5.14.19",
+    "axios": "^1.6.7",
     "chart.js": "^4.4.1",
-    "react-chartjs-2": "^5.2.0"
+    "react": "^18.2.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.1",
+    "react-scripts": "^5.0.1",
+    "socket.io-client": "^4.7.2"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -37,5 +38,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@mui/icons-material": "^5.14.19",
+    "recharts": "^2.15.0"
   }
 }

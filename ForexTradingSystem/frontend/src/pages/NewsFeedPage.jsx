@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchNews } from '../services/apiService';
+import { fetchNewsFeed } from '../services/apiService';
 import NewsArticle from '../components/NewsArticle';
 import styles from '../styles/newsFeed.module.css';
 
@@ -11,7 +11,7 @@ const NewsFeedPage = () => {
   useEffect(() => {
     const loadNews = async () => {
       try {
-        const newsData = await fetchNews();
+        const newsData = await fetchNewsFeed();
         setNews(newsData);
       } catch (err) {
         setError(err.message);
