@@ -1,5 +1,8 @@
 import pytest
-from ForexTradingSystem.modules.data_feed import DataFeed
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from modules.data_feed import DataFeed
 
 @pytest.fixture
 def data_feed():
