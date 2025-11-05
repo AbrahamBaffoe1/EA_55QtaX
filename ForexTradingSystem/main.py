@@ -3,14 +3,15 @@ eventlet.monkey_patch()
 
 import os
 import sys
+import time
 import logging
+import threading
+import jwt
 from decimal import Decimal
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_socketio import SocketIO
 from flask_cors import CORS
-import eventlet
-eventlet.monkey_patch()
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,10 +23,14 @@ from modules.hedging import Hedging
 from modules.arbitrage import Arbitrage
 from modules.monitoring import Monitoring
 
-# Initialize API server
+# Initialize API server with environment variable validation
+API_HOST = os.getenv('API_HOST', '0.0.0.0')
+API_PORT = int(os.getenv('API_PORT', '5000'))
+CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(',')
+
 app = Flask(__name__)
-CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+CORS(app, resources={r"/api/*": {"origins": CORS_ORIGINS}})
+socketio = SocketIO(app, cors_allowed_origins=CORS_ORIGINS)
 
 # Authentication middleware
 @app.before_request
@@ -47,10 +52,12 @@ def authenticate_request():
     token = auth_header.split(' ')[1]
     try:
         # Verify JWT token
-        import jwt
+        jwt_secret = os.getenv('JWT_SECRET')
+        if not jwt_secret:
+            return jsonify({'error': 'JWT configuration error'}), 500
         decoded = jwt.decode(
             token,
-            os.getenv('JWT_SECRET'),
+            jwt_secret,
             algorithms=['HS256']
         )
         request.user = decoded
@@ -67,8 +74,8 @@ def health_check():
 def get_system_status():
     return jsonify({
         'trading_active': trading_system is not None,
-        'last_trade': trading_system.execution.last_trade if trading_system else None,
-        'risk_parameters': trading_system.risk_manager.get_current_risk() if trading_system else None
+        'last_trade': getattr(trading_system.execution, 'last_trade', None) if trading_system else None,
+        'risk_parameters': trading_system.risk_manager.get_risk_status() if trading_system else None
     })
 
 @app.route('/api/control/start', methods=['POST'])
@@ -128,9 +135,8 @@ class TradingSystem:
         self.risk_manager = RiskManager()
         self.hedging = Hedging()
         self.arbitrage = Arbitrage()
-        
+
         # Start monitoring in separate thread
-        import threading
         self.monitoring_thread = threading.Thread(
             target=self.monitoring.run,
             daemon=True
@@ -187,19 +193,18 @@ class TradingSystem:
 if __name__ == "__main__":
     # Initialize trading system
     trading_system = TradingSystem()
-    
+
     # Start trading system in separate thread
-    import threading
     trading_thread = threading.Thread(
         target=trading_system.run,
         daemon=True
     )
     trading_thread.start()
-    
+
     # Start API server
     socketio.run(
         app,
-        host=os.getenv('API_HOST'),
-        port=int(os.getenv('API_PORT')),
+        host=API_HOST,
+        port=API_PORT,
         debug=False
     )

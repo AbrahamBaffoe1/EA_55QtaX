@@ -186,10 +186,10 @@ class MTExecution:
                 
                 # Log order execution
                 self.logger.info(f"Executed trade: {order_response}")
-                
+
                 # Update monitoring if available
-                if hasattr(self, 'monitoring'):
-                    self.monitoring.update_trades(order_response)
+                if hasattr(self, 'monitoring') and self.monitoring:
+                    self.monitoring.add_trade(order_response)
                     
         except Exception as e:
             self.logger.error(f"Error executing trades: {e}")
@@ -220,8 +220,15 @@ class MTExecution:
 
 if __name__ == "__main__":
     # Test the MTExecution class
+    import logging
+    logging.basicConfig(level=logging.INFO)
+
     mt = MTExecution(
         api_url="http://localhost:8080",
         api_key="test-key"
     )
-    print(mt.get_account_info())
+    try:
+        account_info = mt.get_account_info()
+        logging.info(f"Account info: {account_info}")
+    except Exception as e:
+        logging.error(f"Test failed: {e}")

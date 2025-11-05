@@ -1,14 +1,19 @@
+import os
+import json
+import logging
+
+# Configure logging early
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 try:
     from gevent import monkey
     monkey.patch_all()
     async_mode = 'gevent'
 except Exception as e:
-    print(f"Gevent monkey patching failed: {e}")
+    logger.warning(f"Gevent monkey patching failed: {e}")
     async_mode = 'threading'
 
-import os
-import json
-import logging
 from flask import Flask, jsonify, request
 from flask_socketio import SocketIO
 from flask_cors import CORS
@@ -27,8 +32,11 @@ load_dotenv()
 class APIServer:
     def __init__(self):
         self.app = Flask(__name__)
-        CORS(self.app)
-        self.socketio = SocketIO(self.app, cors_allowed_origins="*", async_mode=async_mode)
+
+        # Configure CORS with environment variable
+        cors_origins = os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(',')
+        CORS(self.app, resources={r"/api/*": {"origins": cors_origins}})
+        self.socketio = SocketIO(self.app, cors_allowed_origins=cors_origins, async_mode=async_mode)
         self.logger = self._setup_logger()
         
         # Initialize trading system components
@@ -141,11 +149,86 @@ class APIServer:
             self.logger.error(f"Error getting bot performance: {e}")
             return {}
 
+    def get_portfolio(self):
+        """Get current portfolio information"""
+        try:
+            account_info = self.execution.get_account_info()
+            positions = self.execution.get_positions()
+
+            return {
+                'account_balance': account_info.get('balance', 0),
+                'equity': account_info.get('equity', 0),
+                'margin': account_info.get('margin', 0),
+                'free_margin': account_info.get('free_margin', 0),
+                'positions': positions.get('positions', []),
+                'total_positions': len(positions.get('positions', []))
+            }
+        except Exception as e:
+            self.logger.error(f"Error getting portfolio: {e}")
+            return {
+                'account_balance': 0,
+                'equity': 0,
+                'margin': 0,
+                'free_margin': 0,
+                'positions': [],
+                'total_positions': 0
+            }
+
+    def get_news(self):
+        """Get relevant forex/trading news"""
+        # This is a placeholder - in production, integrate with a news API
+        return {
+            'news': [],
+            'last_updated': None
+        }
+
+    def get_analytics(self):
+        """Get trading analytics and statistics"""
+        try:
+            risk_status = self.risk_manager.get_risk_status()
+
+            return {
+                'risk_metrics': risk_status,
+                'active_strategies': ['EMA', 'MACD', 'Bollinger Bands'],
+                'performance': {
+                    'today_pnl': 0,
+                    'week_pnl': 0,
+                    'month_pnl': 0
+                }
+            }
+        except Exception as e:
+            self.logger.error(f"Error getting analytics: {e}")
+            return {
+                'risk_metrics': {},
+                'active_strategies': [],
+                'performance': {}
+            }
+
+    def get_bot_configurations(self):
+        """Get all bot configurations"""
+        # This is a placeholder - in production, load from database or config file
+        return [
+            {
+                'id': 'bot_1',
+                'name': 'EMA Crossover Bot',
+                'status': 'active',
+                'strategy': 'EMA',
+                'risk_level': 'medium'
+            },
+            {
+                'id': 'bot_2',
+                'name': 'MACD Momentum Bot',
+                'status': 'active',
+                'strategy': 'MACD',
+                'risk_level': 'high'
+            }
+        ]
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, help='Port to run the API server on')
     args = parser.parse_args()
-    
+
     api_server = APIServer()
-    api_server.start(port=5001)
+    api_server.start(port=args.port if args.port else None)

@@ -47,8 +47,10 @@ class WebSocketService {
   }
 
   send(message) {
-    if (this.socket.readyState === WebSocket.OPEN) {
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(message));
+    } else {
+      console.warn('WebSocket is not open. Message not sent:', message);
     }
   }
 
@@ -59,5 +61,6 @@ class WebSocketService {
   }
 }
 
-const wsService = new WebSocketService('ws://localhost:5000/ws');
+const WS_URL = process.env.REACT_APP_WS_URL || 'ws://localhost:5000/ws';
+const wsService = new WebSocketService(WS_URL);
 export default wsService;

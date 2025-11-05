@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -104,11 +104,20 @@ export const fetchMarketResearch = async (symbol, timeframe) => {
 
 // WebSocket connection
 export const connectWebSocket = (onMessage) => {
-  const ws = new WebSocket('ws://localhost:5000/ws');
-  
+  const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:5000/ws';
+  const ws = new WebSocket(wsUrl);
+
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
     onMessage(data);
+  };
+
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error);
+  };
+
+  ws.onclose = () => {
+    console.log('WebSocket connection closed');
   };
 
   return ws;

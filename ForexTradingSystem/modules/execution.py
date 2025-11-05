@@ -9,6 +9,8 @@ class Execution:
         self.exchange = self._initialize_exchange()
         self.logger = self._setup_logger()
         self.monitoring = None  # Will be set by main system
+        self.subscribers = set()
+        self.last_trade = None
         
     def _initialize_exchange(self):
         """Initialize exchange connection with API credentials"""
@@ -69,19 +71,43 @@ class Execution:
             symbol = 'BTC/USDT'
             order = self.exchange.create_market_order(symbol, side, float(amount))
             self.logger.info(f"Order executed: {order}")
-            
+
+            # Store last trade
+            trade_data = {
+                'symbol': symbol,
+                'side': side,
+                'amount': float(amount),
+                'price': order.get('price'),
+                'timestamp': order.get('timestamp')
+            }
+            self.last_trade = trade_data
+
             # Send trade data to monitoring system
             if self.monitoring:
-                self.monitoring.add_trade({
-                    'symbol': symbol,
-                    'side': side,
-                    'amount': float(amount),
-                    'price': order['price'],
-                    'timestamp': order['timestamp']
-                })
-        except ccxt.InsufficientFunds:
-            self.logger.error("Insufficient funds to place order")
-        except ccxt.NetworkError:
-            self.logger.error("Network error while placing order")
+                self.monitoring.add_trade(trade_data)
+
+            # Notify subscribers
+            self._notify_subscribers(trade_data)
+
+        except ccxt.InsufficientFunds as e:
+            self.logger.error(f"Insufficient funds to place order: {e}")
+        except ccxt.NetworkError as e:
+            self.logger.error(f"Network error while placing order: {e}")
         except Exception as e:
             self.logger.error(f"Error placing order: {e}")
+
+    def add_subscriber(self, subscriber_id):
+        """Add a subscriber for trade execution updates"""
+        self.subscribers.add(subscriber_id)
+        self.logger.info(f"Added trade subscriber: {subscriber_id}")
+
+    def remove_subscriber(self, subscriber_id):
+        """Remove a subscriber from trade execution updates"""
+        self.subscribers.discard(subscriber_id)
+        self.logger.info(f"Removed trade subscriber: {subscriber_id}")
+
+    def _notify_subscribers(self, trade_data):
+        """Notify all subscribers about a new trade"""
+        # This would typically emit to websocket subscribers
+        # Implementation depends on the socketio instance
+        pass
